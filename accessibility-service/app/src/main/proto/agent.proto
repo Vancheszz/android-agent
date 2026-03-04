@@ -23,3 +23,14 @@ message Rect{
   int32 top = 3;
   int32 bottom = 4;
 }
+
+message AgentCMD {
+  enum CMDType{
+    CLICK =0;
+    TYPE_TEXT = 1;
+    GET_DUMP = 2;
+  }
+  CMDType type =1;
+  string target_id = 2;
+  string payload = 3;
+}
