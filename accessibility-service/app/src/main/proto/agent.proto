@@ -1,5 +1,11 @@
 syntax = "proto3";
 
+package com.project.ratatoskr;
+
+option java_package = "com.project.ratatoskr";
+
+option java_multiple_files = true;
+
 message ScreenDump {
   string package_name = 1;
   int64 timestamp = 2;
@@ -12,13 +18,14 @@ message ScreenDump {
 message UiNode {
     string text = 1;
     string resource_id = 2;
-    string cont_desc = 3;
-    bool is_clickable = 4;
+    string class_name = 3;
+    string cont_desc = 4;
+    bool is_clickable = 5;
     Rect bounds = 6;
 }
 
-message Rect{
-  int32 left =1;
+message Rect {
+  int32 left = 1;
   int32 right = 2;
   int32 top = 3;
   int32 bottom = 4;
@@ -26,11 +33,11 @@ message Rect{
 
 message AgentCMD {
   enum CMDType{
-    CLICK =0;
+    CLICK = 0;
     TYPE_TEXT = 1;
     GET_DUMP = 2;
   }
-  CMDType type =1;
+  CMDType type = 1;
   string target_id = 2;
   string payload = 3;
 }
