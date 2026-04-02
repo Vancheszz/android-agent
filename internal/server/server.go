@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 
-	// Путь должен соответствовать твоему go.mod + путь к папке
 	pb "github.com/Vancheszz/android-agent/internal/ratatoskr"
 	"google.golang.org/protobuf/proto"
 )
@@ -45,8 +44,25 @@ func HandleConnection(conn net.Conn) {
 
 		fmt.Printf("Dump: %s | Nodes: %d | Time: %d\n",
 			dump.PackageName, len(dump.Nodes), dump.Timestamp)
+		for i, node := range dump.Nodes {
+			if i > 70 {
+				fmt.Println("... и остальные ноды")
+				break
+			}
 
-		//connect to other microservice
+			fmt.Printf("  [Node %d] Class: %s | Text: '%s' | ResourceID: %s | Clickable: %v |  Bounds: [%d, %d, %d, %d]\n",
+				i,
+				node.ClassName,
+				node.Text,
+				node.ResourceId,
+				node.IsClickable,
+				node.Bounds.Left,
+				node.Bounds.Top,
+				node.Bounds.Right,
+				node.Bounds.Bottom,
+			)
+		}
+
 	}
 
 }

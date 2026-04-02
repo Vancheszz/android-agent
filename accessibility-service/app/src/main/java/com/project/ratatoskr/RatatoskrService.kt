@@ -23,16 +23,28 @@ class RatatoskrService: AccessibilityService() {
         isConnecting = true
 
         executor.execute {
-            //try to connnect
-            try {
-                socket = Socket("127.0.0.1", 9999)
-                outputStream = socket?.getOutputStream()
-                Log.d("RATATOSKR", "Connect to Agent Successfully")
-            }catch (e: Exception){
-                Log.e("RATATOSKR", "Fail Connection")
-                Thread.sleep(5000)
-                //recursive connection
-                connectToAgent()
+            while (true) { // Бесконечный цикл попыток
+                try {
+                    Log.d("RATATOSKR", "Trying to connect to Agent...")
+
+                    val newSocket = Socket("10.0.2.2", 9999)
+
+                    outputStream = newSocket.getOutputStream()
+                    socket = newSocket
+
+                    isConnecting = false
+                    Log.d("RATATOSKR", "Connected to Agent Successfully")
+                    break // Выходим из цикла, если подключились
+
+                } catch (e: Exception) {
+                    Log.e("RATATOSKR", " Connection failed: ${e.message}. Retrying in 5s...")
+                    try {
+                        Thread.sleep(5000)
+                    } catch (ie: InterruptedException) {
+                        isConnecting = false
+                        return@execute
+                    }
+                }
             }
         }
     }
@@ -75,8 +87,8 @@ class RatatoskrService: AccessibilityService() {
                 .setIsClickable(node.isClickable)
                 .setBounds(com.project.ratatoskr.Rect.newBuilder()
                     .setLeft(bounds.left)
-                    .setTop(bounds.top)
                     .setRight(bounds.right)
+                    .setTop(bounds.top)
                     .setBottom(bounds.bottom))
                 .build()
 
