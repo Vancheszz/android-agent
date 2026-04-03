@@ -40,6 +40,7 @@ func (h *RatatoskrHandler) Handle(conn net.Conn) {
 
 	// Цикл чтения дампов от Ratatoskr
 	for {
+		// Читаем заголовок (4 байта длины)
 		header := make([]byte, 4)
 		if _, err := io.ReadFull(conn, header); err != nil {
 			if err == io.EOF {
@@ -51,25 +52,34 @@ func (h *RatatoskrHandler) Handle(conn net.Conn) {
 		}
 
 		size := binary.BigEndian.Uint32(header)
+		fmt.Printf("[Ratatoskr] DEBUG: received header, size=%d\n", size)
+
+		// Читаем payload
 		payload := make([]byte, size)
 		if _, err := io.ReadFull(conn, payload); err != nil {
 			fmt.Printf("[Ratatoskr] Payload read error: %v\n", err)
 			return
 		}
 
+		fmt.Printf("[Ratatoskr] DEBUG: read %d bytes of payload\n", len(payload))
+
+		// Парсим ScreenDump
 		dump := &pb.ScreenDump{}
 		if err := proto.Unmarshal(payload, dump); err != nil {
 			fmt.Printf("[Ratatoskr] Protobuf unmarshal error: %v\n", err)
 			continue
 		}
 
+		fmt.Printf("[Ratatoskr] DEBUG: parsed dump, pkg=%s, nodes=%d, timestamp=%d\n",
+			dump.PackageName, len(dump.Nodes), dump.Timestamp)
+
 		// Сохраняем последний дамп
 		h.lastDumpMutex.Lock()
 		h.lastDump = dump
 		h.lastDumpMutex.Unlock()
 
-		fmt.Printf("[Ratatoskr] Received dump: pkg=%s, nodes=%d\n",
-			dump.PackageName, len(dump.Nodes))
+		fmt.Printf("[Ratatoskr] Received dump: pkg=%s, nodes=%d, time=%d\n",
+			dump.PackageName, len(dump.Nodes), dump.Timestamp)
 
 		// Отправляем дамп в Yggdrasil (если подключён)
 		if client := h.registry.GetYggdrasil(); client != nil {
@@ -80,7 +90,9 @@ func (h *RatatoskrHandler) Handle(conn net.Conn) {
 
 // handleDumpRequests обрабатывает запросы от Yggdrasil на получение свежего дампа
 func (h *RatatoskrHandler) handleDumpRequests() {
+	fmt.Println("[Ratatoskr] Dump request handler started")
 	for respCh := range h.dumpRequestCh {
+		fmt.Println("[Ratatoskr] GetDump request received")
 		h.lastDumpMutex.RLock()
 		dump := h.lastDump
 		h.lastDumpMutex.RUnlock()
@@ -102,18 +114,20 @@ func (h *RatatoskrHandler) SendCommand(cmd *pb.AgentCMD) error {
 		return fmt.Errorf("no connection to Ratatoskr")
 	}
 
+	// Сериализуем команду
 	data, err := proto.Marshal(cmd)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal error: %w", err)
 	}
 
+	// Отправляем с фреймингом (4 байта длины, BigEndian)
 	if err := binary.Write(h.conn, binary.BigEndian, uint32(len(data))); err != nil {
-		return err
+		return fmt.Errorf("write length error: %w", err)
 	}
 	if _, err := h.conn.Write(data); err != nil {
-		return err
+		return fmt.Errorf("write data error: %w", err)
 	}
 
-	fmt.Printf("[Ratatoskr] Sent command: %v\n", cmd.Type)
+	fmt.Printf("[Ratatoskr] Sent command: type=%v, payload=%s\n", cmd.Type, cmd.Payload)
 	return nil
 }
